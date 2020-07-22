@@ -50,12 +50,28 @@ def main():
 		if return_msg == "You are now logged in":
 			logged_in = True
 		elif return_msg == "Your account has been blocked, try again later":
+			'''Disconnect sequence'''
+			print('Disconnecting')
+			send(DISCONNECT_MESSAGE, FORMAT, HEADER, client)
 			exit()
 
+	while logged_in == True:
+		print('What is your next action?')
+		action = input()
 
-	'''Disconnect sequence'''
-	print('Disconnecting')
-	send(DISCONNECT_MESSAGE, FORMAT, HEADER, client)
+		if action == 'Download_tempID':
+			pass
+
+		if action == 'wait':
+			'''Ask the server to wait'''
+			wait_msg = 'wait'
+			send(wait_msg, FORMAT, HEADER, client)
+
+		if action == 'logout':
+			'''Disconnect sequence'''
+			print('Disconnecting')
+			send(DISCONNECT_MESSAGE, FORMAT, HEADER, client)
+			exit()
 
 def get_login_details():
 	'''Prrompts the user for their username and login details and returns both.'''

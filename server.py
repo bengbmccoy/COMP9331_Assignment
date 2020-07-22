@@ -74,16 +74,16 @@ def get_creds():
 def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, block_dur):
 	print(f"[NEW CONNECTION] {addr} connected.")
 
+	logging_in = True
 	logged_in = False
 	login_counter = 0
 
 	connected = True
 	while connected:
 
-		'''Start login sequence'''
-
-
-		while logged_in == False:
+		while logging_in == True:
+			'''Start logging in sequence'''
+			# print('logging in sequence starting')
 
 			msg_length = conn.recv(HEADER).decode(FORMAT)
 			if msg_length:
@@ -91,28 +91,46 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 				msg = conn.recv(msg_length).decode(FORMAT)
 				# print(msg)
 
-				cred_check = check_creds(msg, creds_dict)
-				if cred_check == True:
-					conn.send("You are now logged in".encode(FORMAT))
-					logged_in = True
+				if msg == DISCONNECT_MESSAGE:
+					print('disconnecting')
+					connected = False
 
 				else:
-					if login_counter % 3 != 2:
-						conn.send("Invalid login attempt, try again".encode(FORMAT))
+					cred_check = check_creds(msg, creds_dict)
+					if cred_check == True:
+						conn.send("You are now logged in".encode(FORMAT))
+						logged_in = True
+						logging_in = False
+
 					else:
-						conn.send("Your account has been blocked, try again later".encode(FORMAT))
-						time.sleep(block_dur)
-				# print(login_counter)
-				login_counter += 1
+						# print('credentials check failed')
+						# print('the login counter is ', login_counter)
+						if login_counter % 3 != 2:
+							conn.send("Invalid login attempt, try again".encode(FORMAT))
+						else:
+							conn.send("Your account has been blocked, try again later".encode(FORMAT))
+							time.sleep(block_dur)
+					login_counter += 1
 
-		if msg == DISCONNECT_MESSAGE:
-			connected = False
-		print(f"[{addr}] {msg}")
+		if logged_in == True:
+			# print('logged in sequence starting')
 
-		conn.send("ACKNOWLEDGED".encode(FORMAT))
+			msg_length = conn.recv(HEADER).decode(FORMAT)
+			if msg_length:
+				msg_length = int(msg_length)
+				msg = conn.recv(msg_length).decode(FORMAT)
+				# print(msg)
 
-	conn.close()
+				if msg == 'wait':
+					print('waiting for 30s')
+					time.sleep(30)
+					print('wait is over')
 
+				if msg == DISCONNECT_MESSAGE:
+					print('disconnecting')
+					connected = False
+
+	print(f"[EXISTING CONNECTION] {addr} disconnected.")
 
 # def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, block_dur):
 # 	print(f"[NEW CONNECTION] {addr} connected.")
