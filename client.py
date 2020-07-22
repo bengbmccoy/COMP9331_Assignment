@@ -5,13 +5,21 @@ Python 3.7.3
 client.py
 '''
 
+import argparse
 import socket
 
 
 def main():
 
-
-
+	#Parse the arguments from command line
+	parser = argparse.ArgumentParser()
+	parser.add_argument('server_IP', type=int,
+						help='server IP address to communicate with server')
+	parser.add_argument('server_port', type=int,
+						help='server port number to communicate with server')
+	parser.add_argument('client_udp_port', type=int,
+						help='Port number for client to listen for traffic')
+	args = parser.parse_args()
 
 	HEADER = 64
 	PORT = 5050
@@ -20,12 +28,42 @@ def main():
 	SERVER = socket.gethostbyname(socket.gethostname())
 	ADDR = (SERVER, PORT)
 
+
+
+	# Start connection
 	client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	client.connect(ADDR)
 
-	send("Suh World", FORMAT, HEADER, client)
-	send("Suh BEN", FORMAT, HEADER, client)
+	'''Start login sequence'''
+	logged_in = False
+	while logged_in == False:
+		# Get login details
+		user, password = get_login_details()
+		# print(user, password)
+
+		login_message = 'login' + ' ' + user + ' ' + password
+		send(login_message, FORMAT, HEADER, client)
+
+		return_msg = (client.recv(2048).decode(FORMAT))
+		print(return_msg)
+
+		if return_msg == "You are now logged in":
+			logged_in = True
+		elif return_msg == "Your account has been blocked, try again later":
+			exit()
+
+
+	'''Disconnect sequence'''
+	print('Disconnecting')
 	send(DISCONNECT_MESSAGE, FORMAT, HEADER, client)
+
+def get_login_details():
+	'''Prrompts the user for their username and login details and returns both.'''
+
+	user = input("Enter your username : ")
+	password = input("Enter your password : ")
+
+	return user, password
 
 def send(msg, FORMAT, HEADER, client):
 	message = msg.encode(FORMAT)
@@ -34,7 +72,7 @@ def send(msg, FORMAT, HEADER, client):
 	send_length += b' ' * (HEADER - len(send_length))
 	client.send(send_length)
 	client.send(message)
-	print(client.recv(2048))
+
 
 if __name__ == "__main__":
 	main()
