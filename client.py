@@ -60,7 +60,15 @@ def main():
 		action = input()
 
 		if action == 'Download_tempID':
-			pass
+			temp_ID_msg = 'DL_TempID'
+			send(temp_ID_msg, FORMAT, HEADER, client)
+
+			return_msg = (client.recv(2048).decode(FORMAT))
+			# print(return_msg)
+			tempID = return_msg
+
+			print('TempID:')
+			print(tempID)
 
 		if action == 'wait':
 			'''Ask the server to wait'''

@@ -4,15 +4,13 @@ Python 3.7.3
 
 server.py
 
-ToDo:
-- Fix login sequence from being in an endless loop that prints all the time.
--
 '''
 import argparse
 import socket
 import threading
 import datetime
 import time
+from random import randint
 
 def main():
 
@@ -47,18 +45,131 @@ def main():
 	print('sever is starting')
 	server.listen()
 	print(f"Server is listening on {SERVER}")
+
+	# Whilst the server is listening, send any new connections to their own thread
 	while True:
 		conn, addr = server.accept()
 		thread = threading.Thread(target=handle_client, args=(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, block_dur))
 		thread.start()
 		print(f"[ACTIVE CONNECTIONS] {threading.activeCount() - 1}")
 
+
+def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, block_dur):
+	'''This function is for handling each client individually'''
+
+	print(f"[NEW CONNECTION] {addr} connected.")
+
+	# Booleans and counters for managing connection state
+	logging_in = True
+	logged_in = False
+	login_counter = 0
+
+	connected = True
+	while connected:
+
+		while logging_in == True:
+			'''Start logging in sequence'''
+			# print('logging in sequence starting')
+
+			# Receive and decode message
+			msg_length = conn.recv(HEADER).decode(FORMAT)
+			if msg_length:
+				msg_length = int(msg_length)
+				msg = conn.recv(msg_length).decode(FORMAT)
+				# print(msg)
+
+				# Disconnect msg sent by client after 3 failed login attempts
+				if msg == DISCONNECT_MESSAGE:
+					print('disconnecting')
+					connected = False
+
+				# Ig msg is not disconnect message
+				else:
+					# Perform creds check
+					cred_check, user = check_creds(msg, creds_dict)
+
+					# If creds are legit, change connection state to logged_in
+					if cred_check == True:
+						conn.send("You are now logged in".encode(FORMAT))
+						logged_in = True
+						logging_in = False
+
+					# If creds are not legit,
+					else:
+						# print('credentials check failed')
+						# print('the login counter is ', login_counter)
+
+						# If less than 3 attempts taken send try again msg
+						if login_counter % 3 != 2:
+							conn.send("Invalid login attempt, try again".encode(FORMAT))
+
+						# If 3 attempts have been taken, send acct block msg and sleep
+						else:
+							conn.send("Your account has been blocked, try again later".encode(FORMAT))
+							time.sleep(block_dur)
+
+					login_counter += 1
+
+		if logged_in == True:
+			# print('logged in sequence starting')
+
+			# Receive and decode message
+			msg_length = conn.recv(HEADER).decode(FORMAT)
+			if msg_length:
+				msg_length = int(msg_length)
+				msg = conn.recv(msg_length).decode(FORMAT)
+				# print(msg)
+
+				if msg == 'DL_TempID':
+					print('starting tempID sequence for', user)
+					tempID = gen_tempID(user)
+					conn.send(str(tempID).encode(FORMAT))
+					print('tempID sequence is finished for', user)
+					print(tempID)
+
+				if msg == 'wait':
+					print('waiting for 30s')
+					time.sleep(30)
+					print('wait is over')
+
+				if msg == DISCONNECT_MESSAGE:
+					print('disconnecting')
+					connected = False
+
+	print(f"[EXISTING CONNECTION] {addr} disconnected.")
+
+def gen_tempID(user):
+
+	with open('tempIDs.txt') as f:
+		tempID_list = f.readlines()
+
+	all_tempIDs = []
+	for i in tempID_list:
+		all_tempIDs.append(i.split(' ')[1])
+
+	duplicate = True
+
+	while duplicate == True:
+		tempID = randint(10000000000000000000, 99999999999999999999)
+		if tempID not in all_tempIDs:
+			duplicate = False
+
+	start = datetime.datetime.now()
+	expire = start + datetime.timedelta(minutes = 15)
+	dt_start = start.strftime("%d/%m/%Y %H:%M:%S")
+	dt_expire = expire.strftime("%d/%m/%Y %H:%M:%S")
+
+	new_line = str(user) + ' ' + str(tempID) + ' ' + dt_start + ' ' + dt_expire + '\n'
+	with open('tempIDs.txt', "a") as f:
+		f.write(new_line)
+
+	return tempID
+
 def get_creds():
 	'''This function opens the credentials.txt file and reads each line into a
 	list. The function then iterates through the list and adds each user and
 	password to a dict with the key as the user and the value as the password.
 	Finally, the dict is returned.'''
-
 
 	with open('credentials.txt') as f:
 		cred_list = f.readlines()
@@ -71,66 +182,18 @@ def get_creds():
 
 	return creds_dict
 
-def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, block_dur):
-	print(f"[NEW CONNECTION] {addr} connected.")
+def check_creds(msg, creds_dict):
 
-	logging_in = True
-	logged_in = False
-	login_counter = 0
+	user = msg.split(' ')[1]
+	password = msg.split(' ')[2]
 
-	connected = True
-	while connected:
+	if user in creds_dict and password == creds_dict[user]:
+		return True, user
 
-		while logging_in == True:
-			'''Start logging in sequence'''
-			# print('logging in sequence starting')
+	return False, user
 
-			msg_length = conn.recv(HEADER).decode(FORMAT)
-			if msg_length:
-				msg_length = int(msg_length)
-				msg = conn.recv(msg_length).decode(FORMAT)
-				# print(msg)
-
-				if msg == DISCONNECT_MESSAGE:
-					print('disconnecting')
-					connected = False
-
-				else:
-					cred_check = check_creds(msg, creds_dict)
-					if cred_check == True:
-						conn.send("You are now logged in".encode(FORMAT))
-						logged_in = True
-						logging_in = False
-
-					else:
-						# print('credentials check failed')
-						# print('the login counter is ', login_counter)
-						if login_counter % 3 != 2:
-							conn.send("Invalid login attempt, try again".encode(FORMAT))
-						else:
-							conn.send("Your account has been blocked, try again later".encode(FORMAT))
-							time.sleep(block_dur)
-					login_counter += 1
-
-		if logged_in == True:
-			# print('logged in sequence starting')
-
-			msg_length = conn.recv(HEADER).decode(FORMAT)
-			if msg_length:
-				msg_length = int(msg_length)
-				msg = conn.recv(msg_length).decode(FORMAT)
-				# print(msg)
-
-				if msg == 'wait':
-					print('waiting for 30s')
-					time.sleep(30)
-					print('wait is over')
-
-				if msg == DISCONNECT_MESSAGE:
-					print('disconnecting')
-					connected = False
-
-	print(f"[EXISTING CONNECTION] {addr} disconnected.")
+if __name__ == "__main__":
+	main()
 
 # def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, block_dur):
 # 	print(f"[NEW CONNECTION] {addr} connected.")
@@ -172,16 +235,3 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 # 			conn.send("ACKNOWLEDGED".encode(FORMAT))
 #
 # 	conn.close()
-
-def check_creds(msg, creds_dict):
-
-	user = msg.split(' ')[1]
-	password = msg.split(' ')[2]
-
-	if user in creds_dict and password == creds_dict[user]:
-		return True
-
-	return False
-
-if __name__ == "__main__":
-	main()
