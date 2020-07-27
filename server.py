@@ -22,8 +22,9 @@ def main():
 						help='The length of time a user is blocked after failing authentication')
 	args = parser.parse_args()
 
-	# Parse the args into useful variable
+	# Parse the args into useful variables
 	block_dur = args.block_duration
+	srvr_port = args.server_port
 
 	# Info for the socket
 	HEADER = 64
@@ -58,7 +59,9 @@ def main():
 
 
 def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, block_dur, block_list_class):
-	'''This function is for handling each client individually'''
+	'''This function is for handling each client individually.
+	Initially the client must go through the login sequence and once successfully
+	logged in they can go through the post login sequence.'''
 
 	print(f"[NEW CONNECTION] {addr} connected.")
 
@@ -86,11 +89,13 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 					print('disconnecting')
 					connected = False
 
-				# Ig msg is not disconnect message
+				# If msg is not disconnect message
 				else:
-					# Perform creds check
+					# Perform creds check and get username
 					cred_check, user = check_creds(msg, creds_dict)
 
+					# If the user is currently blocked send blocked message and
+					# disconenct
 					if user in block_list_class.block_list:
 						conn.send("Your account has been blocked, try again later".encode(FORMAT))
 						connected = False
@@ -103,14 +108,13 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 
 					# If creds are not legit,
 					else:
-						# print('credentials check failed')
-						# print('the login counter is ', login_counter)
-
-						# If less than 3 attempts taken send try again msg
+						# If less than 3 login attempts taken send try again msg
 						if login_counter % 3 != 2:
 							conn.send("Invalid login attempt, try again".encode(FORMAT))
 
-						# If 3 attempts have been taken, send acct block msg and sleep
+						# If 3 attempts have been taken, send acct block msg,
+						# Update the block list and then wait for the block
+						# duration before unblocking
 						else:
 							conn.send("Your account has been blocked, try again later".encode(FORMAT))
 							block_list_class.add_to_block_list(user)
@@ -121,6 +125,7 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 					login_counter += 1
 
 		if logged_in == True:
+			'''Start Post Login Sequence'''
 			# print('logged in sequence starting')
 
 			# Receive and decode message
@@ -131,11 +136,10 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 				# print(msg)
 
 				if msg == 'DL_TempID':
-					print('starting tempID sequence for', user)
+					print('user:', user)
 					tempID = gen_tempID(user)
 					conn.send(str(tempID).encode(FORMAT))
-					print('tempID sequence is finished for', user)
-					print(tempID)
+					print('TempID:', tempID)
 
 				if msg == 'wait':
 					print('waiting for 30s')
@@ -149,26 +153,35 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 	print(f"[EXISTING CONNECTION] {addr} disconnected.")
 
 def gen_tempID(user):
+	'''This function takes a user name, opens the tempIDs.txt file gets a list of
+	existing tempIDs, generates a new tempID randomly, checks the tempID has not
+	already been allocated, generates a new tempID if it is a duplicate and then
+	saves the user, tempID, time generated and expiry time, before returning the
+	tempID'''
 
+	# Open tempIDs.txt and readlines into a list
 	with open('tempIDs.txt') as f:
 		tempID_list = f.readlines()
 
+	# Get a list of existing tempIDs already in the file
 	all_tempIDs = []
 	for i in tempID_list:
 		all_tempIDs.append(i.split(' ')[1])
 
+	# Generate a non-dupliacte tempID randomly
 	duplicate = True
-
 	while duplicate == True:
 		tempID = randint(10000000000000000000, 99999999999999999999)
 		if tempID not in all_tempIDs:
 			duplicate = False
 
+	# Get the start and expiry time of the tempID
 	start = datetime.datetime.now()
 	expire = start + datetime.timedelta(minutes = 15)
 	dt_start = start.strftime("%d/%m/%Y %H:%M:%S")
 	dt_expire = expire.strftime("%d/%m/%Y %H:%M:%S")
 
+	# Save the new tempID and details into tempIDs.txt
 	new_line = str(user) + ' ' + str(tempID) + ' ' + dt_start + ' ' + dt_expire + '\n'
 	with open('tempIDs.txt', "a") as f:
 		f.write(new_line)
@@ -181,10 +194,12 @@ def get_creds():
 	password to a dict with the key as the user and the value as the password.
 	Finally, the dict is returned.'''
 
+	# Open the list of credentials and strip any whitespace
 	with open('credentials.txt') as f:
 		cred_list = f.readlines()
 		cred_list = [x.strip() for x in cred_list]
 
+	# Create a dict with keys as usernames and values as passwords
 	creds_dict = {}
 	for cred in cred_list:
 		cred_deets = cred.split(' ')
@@ -193,16 +208,25 @@ def get_creds():
 	return creds_dict
 
 def check_creds(msg, creds_dict):
+	'''This function takes a msg received by the server and the credentials dict
+	It then splits the message into user and passwrod and checks that the user
+	is in the creds_dict and that the password is the same as in the creds_dict
+	Returns True if user in dict and passwords match, else returns False'''
 
+	# split the message into user and password
 	user = msg.split(' ')[1]
 	password = msg.split(' ')[2]
 
+	# Perform check on user and password
 	if user in creds_dict and password == creds_dict[user]:
 		return True, user
 
 	return False, user
 
 class RollCall:
+	'''This class is to control the block list and ensure that users blocked
+	from one IP address cannot login via a second IP adress'''
+
 	def __init__(self):
 		self.block_list = []
 
@@ -215,44 +239,3 @@ class RollCall:
 
 if __name__ == "__main__":
 	main()
-
-# def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, block_dur):
-# 	print(f"[NEW CONNECTION] {addr} connected.")
-#
-# 	connected = True
-# 	while connected:
-# 		msg_length = conn.recv(HEADER).decode(FORMAT)
-# 		if msg_length:
-# 			msg_length = int(msg_length)
-# 			msg = conn.recv(msg_length).decode(FORMAT)
-# 			print(msg)
-#
-# 			if msg[:5] == 'login':
-# 				'''Start login sequence'''
-#
-# 				logged_in = False
-# 				login_counter = 0
-#
-# 				while logged_in == False:
-#
-# 					cred_check = check_creds(msg, creds_dict)
-# 					if cred_check == True:
-# 						conn.send("You are now logged in".encode(FORMAT))
-# 						logged_in = True
-#
-# 					else:
-# 						if login_counter % 3 != 2:
-# 							conn.send("Invalid login attempt, try again".encode(FORMAT))
-# 						else:
-# 							conn.send("your account has been blocked, try again later".encode(FORMAT))
-# 							time.sleep(block_dur)
-# 					print(login_counter)
-# 					login_counter += 1
-#
-# 			if msg == DISCONNECT_MESSAGE:
-# 				connected = False
-# 			print(f"[{addr}] {msg}")
-#
-# 			conn.send("ACKNOWLEDGED".encode(FORMAT))
-#
-# 	conn.close()

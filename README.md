@@ -14,6 +14,7 @@ Done:
 
 ToDo:
 - Fix the disconnection of blocked users
+
 - Correct Implementation of Upload_contact_log
 - Correct Implementation of Contact log checking
 - Properly documented report
