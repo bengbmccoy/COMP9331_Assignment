@@ -10,9 +10,10 @@ Done:
 - Successful log in and log out for single client
 - Successful log in for multiple clients (from multiple machines)
 - Correct Implementation of Download_tempID
+- Blocking user for specified interval after 3 unsuccessful attempts (even from different IP)
 
 ToDo:
-- Blocking user for specified interval after 3 unsuccessful attempts (even from different IP)
+- Fix the disconnection of blocked users
 - Correct Implementation of Upload_contact_log
 - Correct Implementation of Contact log checking
 - Properly documented report

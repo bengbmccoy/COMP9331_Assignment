@@ -37,6 +37,9 @@ def main():
 	creds_dict = get_creds()
 	# print(creds_dict)
 
+	# Init class to control the block list
+	block_list_class = RollCall()
+
 	# Create socket and bind port to socket
 	server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	server.bind(ADDR)
@@ -49,12 +52,12 @@ def main():
 	# Whilst the server is listening, send any new connections to their own thread
 	while True:
 		conn, addr = server.accept()
-		thread = threading.Thread(target=handle_client, args=(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, block_dur))
+		thread = threading.Thread(target=handle_client, args=(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, block_dur, block_list_class))
 		thread.start()
 		print(f"[ACTIVE CONNECTIONS] {threading.activeCount() - 1}")
 
 
-def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, block_dur):
+def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, block_dur, block_list_class):
 	'''This function is for handling each client individually'''
 
 	print(f"[NEW CONNECTION] {addr} connected.")
@@ -88,8 +91,12 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 					# Perform creds check
 					cred_check, user = check_creds(msg, creds_dict)
 
+					if user in block_list_class.block_list:
+						conn.send("Your account has been blocked, try again later".encode(FORMAT))
+						connected = False
+
 					# If creds are legit, change connection state to logged_in
-					if cred_check == True:
+					elif cred_check == True:
 						conn.send("You are now logged in".encode(FORMAT))
 						logged_in = True
 						logging_in = False
@@ -106,7 +113,10 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 						# If 3 attempts have been taken, send acct block msg and sleep
 						else:
 							conn.send("Your account has been blocked, try again later".encode(FORMAT))
+							block_list_class.add_to_block_list(user)
 							time.sleep(block_dur)
+							block_list_class.del_from_block_list(user)
+							connected = False
 
 					login_counter += 1
 
@@ -191,6 +201,17 @@ def check_creds(msg, creds_dict):
 		return True, user
 
 	return False, user
+
+class RollCall:
+	def __init__(self):
+		self.block_list = []
+
+	def add_to_block_list(self, user):
+		self.block_list.append(user)
+
+	def del_from_block_list(self, user):
+		if user in self.block_list:
+			self.block_list.remove(user)
 
 if __name__ == "__main__":
 	main()

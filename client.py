@@ -36,9 +36,10 @@ def main():
 
 	'''Start login sequence'''
 	logged_in = False
+	user = None
 	while logged_in == False:
 		# Get login details
-		user, password = get_login_details()
+		user, password = get_login_details(user)
 		# print(user, password)
 
 		login_message = 'login' + ' ' + user + ' ' + password
@@ -81,10 +82,11 @@ def main():
 			send(DISCONNECT_MESSAGE, FORMAT, HEADER, client)
 			exit()
 
-def get_login_details():
+def get_login_details(user):
 	'''Prrompts the user for their username and login details and returns both.'''
 
-	user = input("Enter your username : ")
+	if user == None:
+		user = input("Enter your username : ")
 	password = input("Enter your password : ")
 
 	return user, password
