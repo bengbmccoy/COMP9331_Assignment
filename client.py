@@ -83,6 +83,28 @@ def main():
 			tempID = return_msg
 			print('TempID:', tempID)
 
+		# upload contact log sequence
+		elif action == 'Upload_contact_log':
+			# Get list of contacts
+			with open('z3464555_contactlog.txt') as f:
+				contactlog_list = f.readlines()
+
+			# send action is uplaod msg and get return msg
+			send('upload', FORMAT, HEADER, client)
+			return_msg = (client.recv(2048).decode(FORMAT))
+
+			# If server is ready for upload
+			if return_msg == 'upload_ready':
+
+				# For each contact in the contact log list, send the log_str
+				for i in contactlog_list:
+					log_str = str((i.strip()))
+					send(log_str, FORMAT, HEADER, client)
+					print(log_str)
+
+			# Send upload complete message
+			send('fin_upload', FORMAT, HEADER, client)
+
 		# For Debugging
 		elif action == 'wait':
 			wait_msg = 'wait'

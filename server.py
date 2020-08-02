@@ -141,6 +141,33 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 					conn.send(str(tempID).encode(FORMAT))
 					print('TempID:', tempID)
 
+				if msg == 'upload':
+					print('starting upload sequence')
+
+					# Send ready for upload message and init the log_list
+					conn.send('upload_ready'.encode(FORMAT))
+					log_list = []
+
+					# Loop until fin_upload message is sent from client
+					return_msg = None
+					while return_msg != 'fin_upload':
+
+						# Receive and decode message
+						msg_length = conn.recv(HEADER).decode(FORMAT)
+						if msg_length:
+							msg_length = int(msg_length)
+							return_msg = conn.recv(msg_length).decode(FORMAT)
+
+						# Add contact to log_list
+						log_list.append(return_msg)
+
+					# process the log list
+					log_list.pop()
+					print('received contact log from', user)
+					for i in log_list:
+						print(i)
+
+
 				if msg == 'wait':
 					print('waiting for 30s')
 					time.sleep(30)

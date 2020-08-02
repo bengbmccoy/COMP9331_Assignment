@@ -11,11 +11,13 @@ Done:
 - Successful log in for multiple clients (from multiple machines)
 - Correct Implementation of Download_tempID
 - Blocking user for specified interval after 3 unsuccessful attempts (even from different IP)
+- Correct Implementation of Upload_contact_log
 
 ToDo:
 - Fix the disconnection of blocked users
+- Accept only phone numbers as usernames
 
-- Correct Implementation of Upload_contact_log
+
 - Correct Implementation of Contact log checking
 - Properly documented report
 - Code quality and comments
