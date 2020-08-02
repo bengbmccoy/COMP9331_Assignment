@@ -141,9 +141,16 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 					conn.send(str(tempID).encode(FORMAT))
 					print('TempID:', tempID)
 
-				if msg == 'upload':
-					print('starting upload sequence')
+				if msg == 'wait':
+					print('waiting for 30s')
+					time.sleep(30)
+					print('wait is over')
 
+				if msg == DISCONNECT_MESSAGE:
+					print('disconnecting')
+					connected = False
+
+				if msg == 'upload':
 					# Send ready for upload message and init the log_list
 					conn.send('upload_ready'.encode(FORMAT))
 					log_list = []
@@ -167,16 +174,29 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 					for i in log_list:
 						print(i)
 
+					print('Contact log checking')
 
-				if msg == 'wait':
-					print('waiting for 30s')
-					time.sleep(30)
-					print('wait is over')
+					# Open tempIDs.txt and readlines into a list
+					with open('tempIDs.txt') as f:
+						tempID_list = f.readlines()
 
-				if msg == DISCONNECT_MESSAGE:
-					print('disconnecting')
-					connected = False
+					# for each contact uploaded from client find the tempID
+					for i in log_list:
+						ID = (i.split(' ')[0])
 
+						# for each user in tempIDs.txt find the tempID
+						for j in tempID_list:
+							j_ID = j.split(' ')[1]
+
+							# If the client log and txt tempIDs line up, print info
+							if ID == j_ID:
+								j_user = j.split(' ')[0]
+								COVID_time = str(i.split(' ')[1]) + ' ' + str(i.split(' ')[2])
+								print(j_user)
+								print(COVID_time)
+								print(ID + ';')
+
+	# Print disconnected message
 	print(f"[EXISTING CONNECTION] {addr} disconnected.")
 
 def gen_tempID(user):

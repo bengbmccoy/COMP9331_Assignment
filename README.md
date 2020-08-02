@@ -12,13 +12,12 @@ Done:
 - Correct Implementation of Download_tempID
 - Blocking user for specified interval after 3 unsuccessful attempts (even from different IP)
 - Correct Implementation of Upload_contact_log
+- Correct Implementation of Contact log checking
 
 ToDo:
 - Fix the disconnection of blocked users
 - Accept only phone numbers as usernames
 
-
-- Correct Implementation of Contact log checking
 - Properly documented report
 - Code quality and comments
 - Peer to peer communications including removing beacons older than 3 minutes
