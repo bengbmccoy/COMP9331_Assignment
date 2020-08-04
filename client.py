@@ -10,7 +10,8 @@ $ python .\client.py 192.168.1.9 5050 6969
 
 import argparse
 import socket
-
+import threading
+import sys
 
 def main():
 
@@ -38,6 +39,11 @@ def main():
 	# SERVER = socket.gethostbyname(socket.gethostname())
 	ADDR = (SERVER, PORT)
 
+	# Start beacon listening thread
+	beacon_thread = threading.Thread(target=beacon_listen, args=[client_udp_port])
+	beacon_thread.daemon = True
+	beacon_thread.start()
+
 
 	# Start connection
 	client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,6 +53,7 @@ def main():
 	logged_in = False
 	user = None
 	tempID = None
+	BTver = 1
 
 	'''Start login sequence'''
 	while logged_in == False:
@@ -131,9 +138,10 @@ def main():
 
 			# create socket object, send tempID, dt_start and dt_expire
 			sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-			beacon_str = tempID + ' ' + dt_start + ' ' + dt_expire
+			beacon_str = tempID + dt_start + dt_expire + str(BTver)
 			sock.sendto(beacon_str.encode(), (dest_IP, dest_port))
 			print('Beacon sent with message:', beacon_str)
+
 
 		# For Debugging
 		elif action == 'wait':
@@ -143,11 +151,23 @@ def main():
 		# Logout and disconnect sequence
 		elif action == 'logout':
 			send(DISCONNECT_MESSAGE, FORMAT, HEADER, client)
-			exit()
+			# beacon_thread.join()
+			sys.exit()
 
 		# If prompt not recognized, print error
 		else:
 			print('Error. Invalid command')
+
+def beacon_listen(udp_port):
+	print('beacon_thread_starting')
+	beacon_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	address = (socket.gethostbyname(socket.gethostname()), udp_port)
+	beacon_sock.bind(address)
+	while True:
+		data, addr = beacon_sock.recvfrom(59)
+		print(data, addr)
+
+
 
 def get_login_details(user):
 	'''Prrompts the user for their username and login details and returns both.
