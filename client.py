@@ -3,6 +3,9 @@ Written By: Ben McCoy, July 2020
 Python 3.7.3
 
 client.py
+
+Example command line usage:
+$ python .\client.py 192.168.1.9 5050 6969
 '''
 
 import argparse
@@ -13,7 +16,7 @@ def main():
 
 	#Parse the arguments from command line
 	parser = argparse.ArgumentParser()
-	parser.add_argument('server_IP', type=int,
+	parser.add_argument('server_IP', type=str,
 						help='server IP address to communicate with server')
 	parser.add_argument('server_port', type=int,
 						help='server port number to communicate with server')
@@ -28,10 +31,11 @@ def main():
 
 	# Info for the socket
 	HEADER = 64
-	PORT = 5050
+	PORT = srvr_port
 	FORMAT = 'utf-8'
 	DISCONNECT_MESSAGE = "!DISCONNECT"
-	SERVER = socket.gethostbyname(socket.gethostname())
+	SERVER = srvr_IP
+	# SERVER = socket.gethostbyname(socket.gethostname())
 	ADDR = (SERVER, PORT)
 
 

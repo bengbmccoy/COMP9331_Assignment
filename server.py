@@ -4,6 +4,9 @@ Python 3.7.3
 
 server.py
 
+Example command line usage:
+$ python .\server.py 5050 10
+
 '''
 import argparse
 import socket
@@ -28,7 +31,7 @@ def main():
 
 	# Info for the socket
 	HEADER = 64
-	PORT = 5050
+	PORT = srvr_port
 	SERVER = socket.gethostbyname(socket.gethostname())
 	ADDR = (SERVER, PORT)
 	FORMAT = 'utf-8'
