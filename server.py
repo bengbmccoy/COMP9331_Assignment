@@ -140,8 +140,9 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 
 				if msg == 'DL_TempID':
 					print('user:', user)
-					tempID = gen_tempID(user)
-					conn.send(str(tempID).encode(FORMAT))
+					tempID, dt_start, dt_expire = gen_tempID(user)
+					tempID_str = str(tempID) + ' ' + dt_start + ' ' + dt_expire
+					conn.send(tempID_str.encode(FORMAT))
 					print('TempID:', tempID)
 
 				if msg == 'wait':
@@ -236,7 +237,7 @@ def gen_tempID(user):
 	with open('tempIDs.txt', "a") as f:
 		f.write(new_line)
 
-	return tempID
+	return tempID, dt_start, dt_expire
 
 def get_creds():
 	'''This function opens the credentials.txt file and reads each line into a

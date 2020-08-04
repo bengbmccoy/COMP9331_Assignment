@@ -46,6 +46,7 @@ def main():
 	# initial state variables
 	logged_in = False
 	user = None
+	tempID = None
 
 	'''Start login sequence'''
 	while logged_in == False:
@@ -84,7 +85,9 @@ def main():
 			temp_ID_msg = 'DL_TempID'
 			send(temp_ID_msg, FORMAT, HEADER, client)
 			return_msg = (client.recv(2048).decode(FORMAT))
-			tempID = return_msg
+			tempID = return_msg.split(' ')[0]
+			dt_start = return_msg.split(' ')[1] + ' ' + return_msg.split(' ')[2]
+			dt_expire = return_msg.split(' ')[3] + ' ' + return_msg.split(' ')[4]
 			print('TempID:', tempID)
 
 		# upload contact log sequence
@@ -108,6 +111,29 @@ def main():
 
 			# Send upload complete message
 			send('fin_upload', FORMAT, HEADER, client)
+
+		# Beacon protocol
+		elif action[:6] == 'Beacon':
+			print('starting Beacon sequence')
+
+			# Check that the client currently has a tempID, else exit this protocol
+			if tempID == None:
+				print('First download a tempID')
+				continue
+
+			# Check that an IP and poort were given, else exit this protocol
+			try:
+				dest_IP = action.split(' ')[1]
+				dest_port = int(action.split(' ')[2])
+			except:
+				print('please provide dest_IP and dest_port with command')
+				continue
+
+			# create socket object, send tempID, dt_start and dt_expire
+			sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+			beacon_str = tempID + ' ' + dt_start + ' ' + dt_expire
+			sock.sendto(beacon_str.encode(), (dest_IP, dest_port))
+			print('Beacon sent with message:', beacon_str)
 
 		# For Debugging
 		elif action == 'wait':
