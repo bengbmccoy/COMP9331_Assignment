@@ -13,6 +13,7 @@ Done:
 - Blocking user for specified interval after 3 unsuccessful attempts (even from different IP)
 - Correct Implementation of Upload_contact_log
 - Correct Implementation of Contact log checking
+- Peer to peer communications including removing beacons older than 3 minutes
 
 ToDo:
 - Fix the disconnection of blocked users
@@ -22,4 +23,3 @@ ToDo:
 
 - Properly documented report
 - Code quality and comments
-- Peer to peer communications including removing beacons older than 3 minutes
