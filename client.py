@@ -72,7 +72,7 @@ def main():
 		print(return_msg)
 
 		# if successful login, set state to logged_in = True
-		if return_msg == "You are now logged in":
+		if return_msg == "Welcome to the BlueTrace Simulator!":
 			logged_in = True
 
 		# if return message is block message, disconnect and exit script
@@ -116,14 +116,13 @@ def main():
 				for i in contactlog_list:
 					log_str = str((i.strip()))
 					send(log_str, FORMAT, HEADER, client)
-					print(log_str)
+					print(log_str + ';')
 
 			# Send upload complete message
 			send('fin_upload', FORMAT, HEADER, client)
 
 		# Beacon protocol
 		elif action[:6] == 'Beacon':
-			print('starting Beacon sequence')
 
 			# Check that the client currently has a tempID, else exit this protocol
 			if tempID == None:
@@ -135,25 +134,20 @@ def main():
 				dest_IP = action.split(' ')[1]
 				dest_port = int(action.split(' ')[2])
 			except:
-				print('please provide dest_IP and dest_port with command')
+				print('Please provide dest_IP and dest_port with command')
 				continue
 
 			# create socket object, send tempID, dt_start and dt_expire
 			sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 			beacon_str = tempID + dt_start + dt_expire + str(BTver)
 			sock.sendto(beacon_str.encode(), (dest_IP, dest_port))
-			print('Beacon sent with message:', beacon_str)
-
-
-		# For Debugging
-		elif action == 'wait':
-			wait_msg = 'wait'
-			send(wait_msg, FORMAT, HEADER, client)
+			print(tempID, dt_start, dt_expire + ';')
+			# print(dt_start)
+			# print(dt_expire)
 
 		# Logout and disconnect sequence
 		elif action == 'logout':
 			send(DISCONNECT_MESSAGE, FORMAT, HEADER, client)
-			# beacon_thread.join()
 			sys.exit()
 
 		# If prompt not recognized, print error
@@ -183,10 +177,10 @@ def beacon_listen(udp_port):
 			recv_str_expire = data[39:58].decode()
 
 			# print contents
-			print('recieved beacon:')
-			print(recv_tempID)
-			print(recv_str_start)
-			print(recv_str_expire)
+			print('Recieved beacon:')
+			print(recv_tempID, recv_str_start, recv_str_expire + ';')
+			# print(recv_str_start)
+			# print(recv_str_expire)
 
 			# get the current datetime as datetime obj and string, print string
 			dt_cur_time = datetime.datetime.now()

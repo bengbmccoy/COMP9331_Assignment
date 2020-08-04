@@ -14,12 +14,14 @@ Done:
 - Correct Implementation of Upload_contact_log
 - Correct Implementation of Contact log checking
 - Peer to peer communications including removing beacons older than 3 minutes
+- Fix the disconnection of blocked users
+- time checking of tempIDs and contact logs
 
 ToDo:
-- Fix the disconnection of blocked users
 - Accept only phone numbers as usernames
-- time checking of tempIDs and contact logs
+--> I dont think this is in the scope
 - udp listening should start after log in
+--> I have asked the professor
 
 - Properly documented report
 - Code quality and comments

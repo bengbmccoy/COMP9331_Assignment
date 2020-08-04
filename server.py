@@ -91,6 +91,7 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 				if msg == DISCONNECT_MESSAGE:
 					print('disconnecting')
 					connected = False
+					logged_in = True
 
 				# If msg is not disconnect message
 				else:
@@ -102,10 +103,11 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 					if user in block_list_class.block_list:
 						conn.send("Your account has been blocked, try again later".encode(FORMAT))
 						connected = False
+						break
 
 					# If creds are legit, change connection state to logged_in
 					elif cred_check == True:
-						conn.send("You are now logged in".encode(FORMAT))
+						conn.send("Welcome to the BlueTrace Simulator!".encode(FORMAT))
 						logged_in = True
 						logging_in = False
 
@@ -120,10 +122,13 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 						# duration before unblocking
 						else:
 							conn.send("Your account has been blocked, try again later".encode(FORMAT))
-							block_list_class.add_to_block_list(user)
-							time.sleep(block_dur)
-							block_list_class.del_from_block_list(user)
 							connected = False
+
+							block_thread = threading.Thread(target=block_thread_func, args=[user, block_dur, block_list_class])
+							block_thread.daemon = True
+							block_thread.start()
+
+							break
 
 					login_counter += 1
 
@@ -139,20 +144,15 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 				# print(msg)
 
 				if msg == 'DL_TempID':
-					print('user:', user)
+					print('User:', user)
 					tempID, dt_start, dt_expire = gen_tempID(user)
 					tempID_str = str(tempID) + ' ' + dt_start + ' ' + dt_expire
 					conn.send(tempID_str.encode(FORMAT))
 					print('TempID:', tempID)
 
-				if msg == 'wait':
-					print('waiting for 30s')
-					time.sleep(30)
-					print('wait is over')
-
 				if msg == DISCONNECT_MESSAGE:
-					print('disconnecting')
 					connected = False
+					break
 
 				if msg == 'upload':
 					# Send ready for upload message and init the log_list
@@ -174,11 +174,11 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 
 					# process the log list
 					log_list.pop()
-					print('received contact log from', user)
+					print('Received contact log from:', user)
 					for i in log_list:
-						print(i)
+						print(i + ';')
 
-					print('Contact log checking')
+					print('Contact log checking:')
 
 					# Open tempIDs.txt and readlines into a list
 					with open('tempIDs.txt') as f:
@@ -196,12 +196,18 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 							if ID == j_ID:
 								j_user = j.split(' ')[0]
 								COVID_time = str(i.split(' ')[1]) + ' ' + str(i.split(' ')[2])
-								print(j_user)
-								print(COVID_time)
-								print(ID + ';')
+								print(j_user, COVID_time, ID + ';')
+								# print(COVID_time)
+								# print(ID + ';')
 
 	# Print disconnected message
-	print(f"[EXISTING CONNECTION] {addr} disconnected.")
+	print(f"[EXISTING CONNECTION] {user, addr} disconnected.")
+
+def block_thread_func(user, block_dur, block_list_class):
+	block_list_class.add_to_block_list(user)
+	time.sleep(block_dur)
+	block_list_class.del_from_block_list(user)
+
 
 def gen_tempID(user):
 	'''This function takes a user name, opens the tempIDs.txt file gets a list of
