@@ -12,6 +12,8 @@ import argparse
 import socket
 import threading
 import sys
+import datetime
+import time
 
 def main():
 
@@ -159,18 +161,79 @@ def main():
 			print('Error. Invalid command')
 
 def beacon_listen(udp_port):
-	print('beacon_thread_starting')
+	'''This function handles the beacon listening thread'''
+
+	# Setup listening socket on udp_port
 	beacon_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 	address = (socket.gethostbyname(socket.gethostname()), udp_port)
 	beacon_sock.bind(address)
-	while True:
-		data, addr = beacon_sock.recvfrom(59)
-		print(data, addr)
 
+	# Create an infinite listening loop
+	while True:
+
+		# Look for data from the beacon_socket
+		data, addr = beacon_sock.recvfrom(59)
+
+		# If data is received, decode and print contents and more
+		if data:
+
+			# decode the message into various parts
+			recv_tempID = data[:20].decode()
+			recv_str_start = data[20:39].decode()
+			recv_str_expire = data[39:58].decode()
+
+			# print contents
+			print('recieved beacon:')
+			print(recv_tempID)
+			print(recv_str_start)
+			print(recv_str_expire)
+
+			# get the current datetime as datetime obj and string, print string
+			dt_cur_time = datetime.datetime.now()
+			str_cur_time = dt_cur_time.strftime("%d/%m/%Y %H:%M:%S")
+			print('The current time is:', str_cur_time)
+
+			# convert received datetime strings to datetime objects
+			recv_dt_start = datetime.datetime.strptime(recv_str_start, '%d/%m/%Y %H:%M:%S')
+			recv_dt_expire = datetime.datetime.strptime(recv_str_expire, '%d/%m/%Y %H:%M:%S')
+
+			# Check that the tempID is valid,
+			if dt_cur_time >= recv_dt_start and dt_cur_time <= recv_dt_expire:
+				print('The beacon is valid')
+
+				# start a thread to add this tempID to the conctatlog for 3 mins
+				save_str = recv_tempID + ' ' + recv_str_start + ' ' + recv_str_expire + '\n'
+				save_thread = threading.Thread(target=save_3_mins, args=[save_str])
+				save_thread.daemon = True
+				save_thread.start()
+
+			# Beacon is invalid
+			else:
+				print('The beacon is invalid')
+
+def save_3_mins(save_str):
+	'''This function handles writing and removing items from the contact log'''
+
+	# Add the save_str as a new line
+	with open("z3464555_contactlog.txt", "a") as f:
+		f.write(save_str)
+
+	# Wait for 3 minutes
+	time.sleep(180)
+
+	# Get the contents of the file as list and delete save_str
+	with open("z3464555_contactlog.txt", "r+") as f:
+		old = f.readlines()
+	old.remove(save_str)
+
+	# Overwrite the file with the list with save_str deleted
+	with open("z3464555_contactlog.txt", "w") as f:
+		for item in old:
+			f.write("%s" % item)
 
 
 def get_login_details(user):
-	'''Prrompts the user for their username and login details and returns both.
+	'''Prompts the user for their username and login details and returns both.
 	If user is None, just ask for password'''
 
 	# If user is None, ask user for user and pass, else, just ask for pass

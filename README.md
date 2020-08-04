@@ -18,6 +18,7 @@ ToDo:
 - Fix the disconnection of blocked users
 - Accept only phone numbers as usernames
 - time checking of tempIDs and contact logs
+- udp listening should start after log in
 
 - Properly documented report
 - Code quality and comments
