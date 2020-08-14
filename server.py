@@ -1,11 +1,20 @@
 '''
-Written By: Ben McCoy, July 2020
+Written By: Ben McCoy z3464555, July 2020
 Python 3.7.3
-
 server.py
 
 Example command line usage:
+$ python .\server.py [server_port] [block_duration]
 $ python .\server.py 5050 10
+
+This script was written for the Term 2, 2020 COMP9331 Assignment.
+
+This script is server.py and acts as the server for a simulated BlueTrace app,
+the server provides tempIDs and stores contact logs that are uploaded by clients
+of the server who have logged in and been authenticated. The server script can
+handle multiple simultaneous clients on multiple threads and uses TCP connections
+to communicate with clients. When a client uses the command "logout" the client
+and server connection is closed.
 
 '''
 import argparse
@@ -29,17 +38,18 @@ def main():
 	block_dur = args.block_duration
 	srvr_port = args.server_port
 
+	# Get the IP address of current machine
+	SERVER = socket.gethostbyname(socket.gethostname())
+
 	# Info for the socket
 	HEADER = 64
 	PORT = srvr_port
-	SERVER = socket.gethostbyname(socket.gethostname())
 	ADDR = (SERVER, PORT)
 	FORMAT = 'utf-8'
 	DISCONNECT_MESSAGE = "!DISCONNECT"
 
 	# Get a dict of credentials with the users as keys and the passwords as values
 	creds_dict = get_creds()
-	# print(creds_dict)
 
 	# Init class to control the block list
 	block_list_class = RollCall()
@@ -49,7 +59,6 @@ def main():
 	server.bind(ADDR)
 
 	# Start the server listening
-	print('sever is starting')
 	server.listen()
 	print(f"Server is listening on {SERVER}")
 
@@ -68,17 +77,17 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 
 	print(f"[NEW CONNECTION] {addr} connected.")
 
-	# Booleans and counters for managing connection state
+	# Booleans and counters for managing new connection state
 	logging_in = True
 	logged_in = False
 	login_counter = 0
-
 	connected = True
+
+	# Start infinite listening loop
 	while connected:
 
 		while logging_in == True:
 			'''Start logging in sequence'''
-			# print('logging in sequence starting')
 
 			# Receive and decode message
 			msg_length = conn.recv(HEADER).decode(FORMAT)
@@ -134,7 +143,6 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 
 		if logged_in == True:
 			'''Start Post Login Sequence'''
-			# print('logged in sequence starting')
 
 			# Receive and decode message
 			msg_length = conn.recv(HEADER).decode(FORMAT)
@@ -143,6 +151,10 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 				msg = conn.recv(msg_length).decode(FORMAT)
 				# print(msg)
 
+				# If msg is DL_tempID, print username on server output, generate
+				# a unique tempID with start and expiry times, place the info in
+				# a string and send it to the client and print tempID on server
+				# output
 				if msg == 'DL_TempID':
 					print('User:', user)
 					tempID, dt_start, dt_expire = gen_tempID(user)
@@ -150,10 +162,12 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 					conn.send(tempID_str.encode(FORMAT))
 					print('TempID:', tempID)
 
+				# If msg is disonnect msg, then break the conneciton
 				if msg == DISCONNECT_MESSAGE:
 					connected = False
 					break
 
+				# If client uses Upload_contact_log command
 				if msg == 'upload':
 					# Send ready for upload message and init the log_list
 					conn.send('upload_ready'.encode(FORMAT))
@@ -204,6 +218,10 @@ def handle_client(conn, addr, HEADER, FORMAT, DISCONNECT_MESSAGE, creds_dict, bl
 	print(f"[EXISTING CONNECTION] {user, addr} disconnected.")
 
 def block_thread_func(user, block_dur, block_list_class):
+	'''This function adds a user to the block list stored in the RollCall class,
+	then waits for a period of the block duration before removing the user from
+	the block list'''
+	
 	block_list_class.add_to_block_list(user)
 	time.sleep(block_dur)
 	block_list_class.del_from_block_list(user)
@@ -251,12 +269,12 @@ def get_creds():
 	password to a dict with the key as the user and the value as the password.
 	Finally, the dict is returned.'''
 
-	# Open the list of credentials and strip any whitespace
+	# Open credentials.txt add each line to list and strip any whitespace
 	with open('credentials.txt') as f:
 		cred_list = f.readlines()
 		cred_list = [x.strip() for x in cred_list]
 
-	# Create a dict with keys as usernames and values as passwords
+	# Create a dict with keys as usernames and values as passwords using list
 	creds_dict = {}
 	for cred in cred_list:
 		cred_deets = cred.split(' ')
@@ -284,12 +302,15 @@ class RollCall:
 	'''This class is to control the block list and ensure that users blocked
 	from one IP address cannot login via a second IP adress'''
 
+	# Init an empty list
 	def __init__(self):
 		self.block_list = []
 
+	# Function to add user to block list
 	def add_to_block_list(self, user):
 		self.block_list.append(user)
 
+	# Function to delete user from block list
 	def del_from_block_list(self, user):
 		if user in self.block_list:
 			self.block_list.remove(user)

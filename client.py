@@ -5,7 +5,22 @@ Python 3.7.3
 client.py
 
 Example command line usage:
+$ python .\client.py [server_IP] [server_port] [client_udp_port]
 $ python .\client.py 192.168.1.9 5050 6969
+
+This script was written for the Term 2, 2020 COMP9331 Assignment.
+
+This script is client.py and acts as the clients for a simulated BlueTrace app.
+When run, the script connects to the server.py script and the client is asked to
+log in with a valid username and password that are managed by the server. If the
+user provides incorrect username or password for three consecutive logins, then
+the user is blocked from logging in for a duration of time. If the user
+successfully logs in, then they are able to:
+- Download a temporary ID from the server
+- Upload their contact log to the server
+- Send out a "Beacon" to other clients using UDP messaging
+- logout of the system
+
 '''
 
 import argparse
@@ -41,21 +56,16 @@ def main():
 	# SERVER = socket.gethostbyname(socket.gethostname())
 	ADDR = (SERVER, PORT)
 
-	# Start beacon listening thread
-	beacon_thread = threading.Thread(target=beacon_listen, args=[client_udp_port])
-	beacon_thread.daemon = True
-	beacon_thread.start()
-
-
-	# Start connection
-	client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	client.connect(ADDR)
-
 	# initial state variables
 	logged_in = False
 	user = None
 	tempID = None
 	BTver = 1
+	beacon_on = False
+
+	# Start connection
+	client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	client.connect(ADDR)
 
 	'''Start login sequence'''
 	while logged_in == False:
@@ -84,6 +94,13 @@ def main():
 
 	'''Start post-login sequence'''
 	while logged_in == True:
+
+		# Start the beacon listening thread
+		if beacon_on == False:
+			beacon_thread = threading.Thread(target=beacon_listen, args=[client_udp_port])
+			beacon_thread.daemon = True
+			beacon_thread.start()
+			beacon_on = True
 
 		# Ask user for prompt
 		print('What is your next action?')

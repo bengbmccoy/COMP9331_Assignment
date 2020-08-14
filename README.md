@@ -1,9 +1,9 @@
 # COMP9331_Assignment
 COMP9331 Assignment - BlueTrace
 
-Resources:
+Resources used:
 https://techwithtim.net/tutorials/socket-programming/
-
+https://www.geeksforgeeks.org/start-and-stop-a-thread-in-python/
 
 
 Done:
@@ -16,12 +16,8 @@ Done:
 - Peer to peer communications including removing beacons older than 3 minutes
 - Fix the disconnection of blocked users
 - time checking of tempIDs and contact logs
-
-ToDo:
-- Accept only phone numbers as usernames
---> I dont think this is in the scope
-- udp listening should start after log in
---> I have asked the professor
-
 - Properly documented report
 - Code quality and comments
+
+
+ToDo:
